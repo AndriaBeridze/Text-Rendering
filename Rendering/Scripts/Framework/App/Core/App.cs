@@ -1,10 +1,14 @@
 namespace Rendering.App;
 
-using Microsoft.VisualBasic;
+using Rendering.API;
+using Rendering.Reading;
 using Raylib_cs;
 
 class App {
+    private FontParser parser;
+
     public App() {
+        parser = new FontParser("Poppins-Regular");
     }
 
     public void Update() {
