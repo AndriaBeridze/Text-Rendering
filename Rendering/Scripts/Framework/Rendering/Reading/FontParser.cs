@@ -4,88 +4,124 @@ using Rendering.API;
 using Rendering.Helper;
 
 class FontParser {
-    FontReader reader;
+    private FontReader reader;
 
-    Dictionary<string, UInt32> tableLocation = new Dictionary<string, UInt32>();
+    private Dictionary<string, UInt32> tableLocation = new Dictionary<string, UInt32>();
+
+    private int numGlyphs;
+    private uint[] glyphOffsets;
+
+    private bool isShortVersion = false;
 
     public FontParser(string path) {
         reader = new FontReader(path);
 
         reader.SkipBytes(4);
-        int numTables = reader.ReadUIint16();
+        int numTables = reader.ReadUInt16();
         reader.SkipBytes(3 * 2);
 
-        Console.WriteLine("Number of tables: " + numTables);
         for (int i = 0; i < numTables; i++) {
             string tag = reader.ReadTag();
 
-            UInt32 checksum = reader.ReadUIint32();
-            UInt32 offset = reader.ReadUIint32();
-            UInt32 length = reader.ReadUIint32();
+            UInt32 checksum = reader.ReadUInt32();
+            UInt32 offset = reader.ReadUInt32();
+            UInt32 length = reader.ReadUInt32();
 
             tableLocation.Add(tag, offset);
-
-            Console.WriteLine($"Table : {tag:D6} | Position : {offset:D6} | Length : {length:D6}");
         }
 
-        reader.GoTo((int) tableLocation["glyf"]);
+        // Get number of glyphs
+        reader.GoTo(tableLocation["maxp"] + 4); // Skip version
+        numGlyphs = reader.ReadUInt16();
+        glyphOffsets = new uint[numGlyphs];
+
+        // Get the ttf version
+        // Important for the glyph offset data
+        // Short version: data -> actual offset / 2
+        // Long version: data -> actual offset
+        reader.GoTo(tableLocation["head"]);
+        reader.SkipBytes(50); // Skip to indexToLocFormat
+        isShortVersion = reader.ReadUInt16() == 0;
+
+        // Get the glyph offsets by reading numGlyphs values from the loca table
+        reader.GoTo(tableLocation["loca"]);
+        for (int i = 0; i < numGlyphs; i++) {
+            glyphOffsets[i] = isShortVersion ? reader.ReadUInt16() * 2u : reader.ReadUInt32();
+        }
+
+        reader.GoTo(tableLocation["glyf"] + glyphOffsets[51]);
     }
 
-    public Glyph ReadGlyph() {
+    public GlyphData ReadGlyph(int index) {
+        reader.GoTo(tableLocation["glyf"] + glyphOffsets[index]);
+
         // Read number of contours
         int numContours = reader.ReadInt16();
-        if (numContours <= 0) {
-            return new Glyph(new int[0], new int[0], new int[0]);
-        }
+        if (numContours < 0) return new GlyphData([], [], [], []);
+        
         int[] endPts = new int[numContours];
-        reader.SkipBytes(4 * 2);
+        reader.SkipBytes(4 * 2); // Skip bounding box
 
-        for (int i = 0; i < endPts.Length; i++) {
-            endPts[i] = reader.ReadUIint16();
-        }
+        for (int i = 0; i < endPts.Length; i++) endPts[i] = reader.ReadUInt16();
 
         // Flags
         int numPoints = endPts[endPts.Length - 1] + 1;
         byte[] flags = new byte[numPoints];
-        reader.SkipBytes(reader.ReadUIint16()); // Instructions
+        reader.SkipBytes(reader.ReadUInt16()); // Instructions
 
         for (int i = 0; i < numPoints; i++) {
             byte flag = reader.ReadByte();
             flags[i] = flag;
 
             if (ByteHelper.IsBitSet(flags[i], 3)) {
+                // Repeat
                 int repeat = reader.ReadByte();
                 for (int j = 0; j < repeat; j++) {
-                    Console.WriteLine($"{ numPoints } { i } { repeat }");
-                    flags[i] = flag;
+                    flags[++i] = flag;
                 }
             }
         }
 
         int[] xCoords = GetCoords(reader, flags, readingX : true);
         int[] yCoords = GetCoords(reader, flags, readingX : false);
+        bool[] onCurve = GetOnCurvePoints(flags);
 
-        return new Glyph(xCoords, yCoords, endPts);
+        return new GlyphData(xCoords, yCoords, onCurve, endPts);
     }
 
     private int[] GetCoords(FontReader reader, byte[] flags, bool readingX) {
         int[] coords = new int[flags.Length];
-        int shortVectorFlag = readingX ? 1 : 2;
-        int skipVectorFlag = readingX ? 4 : 5;
+        bool[] onCurve = new bool[flags.Length];  
+
+        int shortVectorFlag = readingX ? 1 : 2; // second bit is for x, third bit is for y
+        int skipVectorFlag = readingX ? 4 : 5; // fifth bit is for x, sixth bit is for y
 
         for (int i = 0; i < flags.Length; i++) {
             byte flag = flags[i];
             coords[i] = i == 0 ? 0 : coords[i - 1];
 
-            bool isOnCurve = ByteHelper.IsBitSet(flag, 0);
+            onCurve[i] = ByteHelper.IsBitSet(flag, 0);
 
-            if (ByteHelper.IsBitSet(flag, shortVectorFlag)) {
-                coords[i] += reader.ReadByte() * (!ByteHelper.IsBitSet(flag, skipVectorFlag) ? -1 : 1);
-            } else if (!ByteHelper.IsBitSet(flag, skipVectorFlag)) {
-                coords[i] += reader.ReadInt16();
-            }
+            
+            int offset = 0;
+            if (ByteHelper.IsBitSet(flag, shortVectorFlag)) offset = reader.ReadByte() * (!ByteHelper.IsBitSet(flag, skipVectorFlag) ? -1 : 1);
+            else if (!ByteHelper.IsBitSet(flag, skipVectorFlag)) offset += reader.ReadInt16();
+
+            coords[i] += offset;
         }
 
         return coords;
+    }
+
+    private bool[] GetOnCurvePoints(byte[] flags) {
+        bool[] onCurve = new bool[flags.Length];
+
+        for (int i = 0; i < flags.Length; i++) {
+            // First bit is set if the point is on the curve
+            // If it is not set, the point is off the curve
+            onCurve[i] = ByteHelper.IsBitSet(flags[i], 0);
+        }
+
+        return onCurve;
     }
 }

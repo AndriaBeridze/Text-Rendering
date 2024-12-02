@@ -6,9 +6,12 @@ using Raylib_cs;
 
 class App {
     private FontParser parser;
+    private Glyph glyph;
 
     public App() {
-        parser = new FontParser("Poppins-Regular");
+        parser = new FontParser("MapleMono-Bold"); // Example font
+
+        glyph = new Glyph(parser.ReadGlyph(6));
     }
 
     public void Update() {
@@ -16,5 +19,6 @@ class App {
     }
 
     public void Render() {
+        glyph.Render();
     }
 }

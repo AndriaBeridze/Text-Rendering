@@ -12,7 +12,7 @@ class FontReader {
         reader = new BinaryReader(stream);
     }
 
-    public void SkipBytes(int count) {
+    public void SkipBytes(uint count) {
         stream.Position += count;
     }
 
@@ -22,7 +22,7 @@ class FontReader {
 
     public int Position => (int) stream.Position;
 
-    public UInt16 ReadUIint16() {
+    public UInt16 ReadUInt16() {
         UInt16 value = reader.ReadUInt16();
 
         if (BitConverter.IsLittleEndian) {
@@ -32,7 +32,7 @@ class FontReader {
         return value;
     }
 
-    public UInt32 ReadUIint32() {
+    public UInt32 ReadUInt32() {
         UInt32 value = reader.ReadUInt32();
 
         if (BitConverter.IsLittleEndian) {
@@ -47,10 +47,10 @@ class FontReader {
         return value;
     }
 
-    public Int16 ReadInt16() => (Int16) ReadUIint16();
-    public Int32 ReadInt32() => (Int32) ReadUIint32();
+    public Int16 ReadInt16() => (Int16) ReadUInt16();
+    public Int32 ReadInt32() => (Int32) ReadUInt32();
 
-    public void GoTo(int position) => stream.Position = position;
+    public void GoTo(uint position) => stream.Position = position;
     
     public string ReadTag() {
         string tag = "";
