@@ -2,6 +2,7 @@ namespace Rendering.Reading;
 
 using System.Numerics;
 using Rendering.API;
+using Rendering.App;
 using Rendering.Helper;
 
 class FontParser {
@@ -54,7 +55,7 @@ class FontParser {
 
         // Read number of contours
         int numContours = reader.ReadInt16();
-        if (numContours < 0) return ReadGlyph(index + 1);
+        if (numContours < 0) return ReadCompoundGlyph(index);
         
         int[] endPts = new int[numContours];
         reader.SkipBytes(4 * 2); // Skip bounding box
@@ -120,5 +121,58 @@ class FontParser {
         }
 
         return onCurve;
+    }
+
+    private GlyphData ReadCompoundGlyph(uint index) {
+        GlyphData glyph = new GlyphData([], [], [], []);
+        reader.GoTo(tableLocation["glyf"] + glyphOffsets[index]);
+
+        reader.SkipBytes(2); // Skip number of contours 
+        reader.SkipBytes(2 * 4); // Skip bounding box
+
+        while (true) {
+            (GlyphData subGlyph, bool isLast) = ReadComponentGlyph();
+
+            foreach (List<Vector2> contours in subGlyph.Contours) {
+                glyph.Contours.Add(contours);
+            }
+
+            if (isLast) break;
+        }
+
+        return glyph;
+    }
+
+    private (GlyphData, bool) ReadComponentGlyph() {
+        uint flags = reader.ReadUInt16();
+        uint glyphIndex = reader.ReadUInt16();
+
+        int prevLocation = reader.Position;
+        GlyphData glyph = ReadGlyph(glyphIndex);
+        reader.GoTo((uint) prevLocation);
+
+        double offsetX = BitHelper.IsBitSet(flags, 0) ? reader.ReadInt16() : reader.ReadSByte();
+        double offsetY = BitHelper.IsBitSet(flags, 0) ? reader.ReadInt16() : reader.ReadSByte();
+        double scaleX = 1, scaleY = 1;
+
+        if (BitHelper.IsBitSet(flags, 3)) {
+            scaleX = scaleY = reader.ReadF2Dot14();
+        } else if (BitHelper.IsBitSet(flags, 6)) {
+            scaleX = reader.ReadF2Dot14();
+            scaleY = reader.ReadF2Dot14();
+        }
+
+        for (int i = 0; i < glyph.Contours.Count; i++) {
+            for (int j = 0; j < glyph.Contours[i].Count; j++) {
+                Vector2 point = glyph.Contours[i][j];
+
+                point.X = (float) (point.X * scaleX + offsetX);
+                point.Y = (float) (point.Y * scaleY + offsetY);
+
+                glyph.Contours[i][j] = point;
+            }
+        }
+
+        return (glyph, !BitHelper.IsBitSet(flags, 5));
     }
 }

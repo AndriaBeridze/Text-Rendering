@@ -11,15 +11,14 @@ class App {
     uint count = 0;
 
     public App() {
-        parser = new FontParser("JetBrainsMonoNL-Regular"); // Example font
+        parser = new FontParser("Poppins-Regular"); // Example font
 
         glyph = new Glyph(parser.ReadGlyph(count));
     }
 
     public void Update() {
-        if (Raylib.IsKeyPressed(KeyboardKey.Space)) {
-           glyph = new Glyph(parser.ReadGlyph(++count));
-        }
+        Thread.Sleep(100);
+        glyph = new Glyph(parser.ReadGlyph(++count));
     }
 
     public void Render() {
