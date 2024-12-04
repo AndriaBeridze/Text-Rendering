@@ -6,7 +6,7 @@ using Raylib_cs;
 class Program {
     static void Main() {
         Raylib.SetTraceLogLevel(TraceLogLevel.None);
-        Raylib.InitWindow(Theme.ScreenWidth, Theme.ScreenHeight, "Rendering");
+        Raylib.InitWindow(Theme.ScreenWidth, Theme.ScreenHeight, "Text Rendering");
         Raylib.SetTargetFPS(60);
 
         App app = new App();

@@ -10,11 +10,10 @@ class GlyphData {
     public GlyphData(int[] xCoords, int[] yCoords, bool[] onCurve, int[] endPts) {
         Contours = [[]];
         for (int i = 0; i < xCoords.Length; i++) {
-            Contours[Contours.Count - 1].Add(new Vector2(xCoords[i], yCoords[i]));
-            if (endPts.Contains(i)) {
-                // Endpoint reached, start a new contour
-                Contours.Add([]);
-            }
+            Vector2 point = new Vector2(xCoords[i], yCoords[i]);
+            Contours[Contours.Count - 1].Add(point);
+
+            if (endPts.Contains(i)) Contours.Add([]); // Endpoint reached, start a new contour
         }
 
         Contours.RemoveAt(Contours.Count - 1);
@@ -26,7 +25,7 @@ class GlyphData {
             int start = i == 0 ? 0 : endPts[i - 1] + 1;
             int end = endPts[i];
 
-            List<Vector2> contour = Contours[i];
+            List<Vector2> contour = new List<Vector2>();
 
             for (int j = start; j <= end; j++) {
                 int next = j == end ? start : j + 1;
@@ -35,6 +34,13 @@ class GlyphData {
                     // Add midpoint
                     contour.Add((Contours[i][j - start] + Contours[i][next - start]) / 2);
                 }
+            }
+
+            // First point needs to be on the curve, because drawing cannot start from a control point
+            // If it's not, move it to the end
+            if (!onCurve[start]) {
+                contour.Add(contour[0]);
+                contour.RemoveAt(0);
             }
 
             Contours[i] = contour;

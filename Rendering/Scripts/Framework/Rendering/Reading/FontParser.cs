@@ -1,5 +1,6 @@
 namespace Rendering.Reading;
 
+using System.Numerics;
 using Rendering.API;
 using Rendering.Helper;
 
@@ -10,8 +11,6 @@ class FontParser {
 
     private int numGlyphs;
     private uint[] glyphOffsets;
-
-    private bool isShortVersion = false;
 
     public FontParser(string path) {
         reader = new FontReader(path);
@@ -38,26 +37,24 @@ class FontParser {
         // Get the ttf version
         // Important for the glyph offset data
         // Short version: data -> actual offset / 2
-        // Long version: data -> actual offset
+        // Long version:  data -> actual offset
         reader.GoTo(tableLocation["head"]);
         reader.SkipBytes(50); // Skip to indexToLocFormat
-        isShortVersion = reader.ReadUInt16() == 0;
+        bool isShort = reader.ReadUInt16() == 0;
 
         // Get the glyph offsets by reading numGlyphs values from the loca table
         reader.GoTo(tableLocation["loca"]);
         for (int i = 0; i < numGlyphs; i++) {
-            glyphOffsets[i] = isShortVersion ? reader.ReadUInt16() * 2u : reader.ReadUInt32();
+            glyphOffsets[i] = isShort ? reader.ReadUInt16() * 2u : reader.ReadUInt32();
         }
-
-        reader.GoTo(tableLocation["glyf"] + glyphOffsets[51]);
     }
 
-    public GlyphData ReadGlyph(int index) {
+    public GlyphData ReadGlyph(uint index) {
         reader.GoTo(tableLocation["glyf"] + glyphOffsets[index]);
 
         // Read number of contours
         int numContours = reader.ReadInt16();
-        if (numContours < 0) return new GlyphData([], [], [], []);
+        if (numContours < 0) return ReadGlyph(index + 1);
         
         int[] endPts = new int[numContours];
         reader.SkipBytes(4 * 2); // Skip bounding box
@@ -73,7 +70,7 @@ class FontParser {
             byte flag = reader.ReadByte();
             flags[i] = flag;
 
-            if (ByteHelper.IsBitSet(flags[i], 3)) {
+            if (BitHelper.IsBitSet(flags[i], 3)) {
                 // Repeat
                 int repeat = reader.ReadByte();
                 for (int j = 0; j < repeat; j++) {
@@ -100,12 +97,12 @@ class FontParser {
             byte flag = flags[i];
             coords[i] = i == 0 ? 0 : coords[i - 1];
 
-            onCurve[i] = ByteHelper.IsBitSet(flag, 0);
+            onCurve[i] = BitHelper.IsBitSet(flag, 0);
 
             
             int offset = 0;
-            if (ByteHelper.IsBitSet(flag, shortVectorFlag)) offset = reader.ReadByte() * (!ByteHelper.IsBitSet(flag, skipVectorFlag) ? -1 : 1);
-            else if (!ByteHelper.IsBitSet(flag, skipVectorFlag)) offset += reader.ReadInt16();
+            if (BitHelper.IsBitSet(flag, shortVectorFlag)) offset = reader.ReadByte() * (!BitHelper.IsBitSet(flag, skipVectorFlag) ? -1 : 1);
+            else if (!BitHelper.IsBitSet(flag, skipVectorFlag)) offset += reader.ReadInt16();
 
             coords[i] += offset;
         }
@@ -119,7 +116,7 @@ class FontParser {
         for (int i = 0; i < flags.Length; i++) {
             // First bit is set if the point is on the curve
             // If it is not set, the point is off the curve
-            onCurve[i] = ByteHelper.IsBitSet(flags[i], 0);
+            onCurve[i] = BitHelper.IsBitSet(flags[i], 0);
         }
 
         return onCurve;

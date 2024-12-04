@@ -20,6 +20,10 @@ class FontReader {
         return reader.ReadByte();
     }
 
+    public sbyte ReadSByte() {
+        return reader.ReadSByte();
+    }
+
     public int Position => (int) stream.Position;
 
     public UInt16 ReadUInt16() {
@@ -51,6 +55,11 @@ class FontReader {
     public Int32 ReadInt32() => (Int32) ReadUInt32();
 
     public void GoTo(uint position) => stream.Position = position;
+
+    public double ReadF2Dot14() {
+        short value = reader.ReadInt16();
+        return value / 16384.0f;
+    }
     
     public string ReadTag() {
         string tag = "";

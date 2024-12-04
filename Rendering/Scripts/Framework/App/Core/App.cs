@@ -8,14 +8,18 @@ class App {
     private FontParser parser;
     private Glyph glyph;
 
-    public App() {
-        parser = new FontParser("MapleMono-Bold"); // Example font
+    uint count = 0;
 
-        glyph = new Glyph(parser.ReadGlyph(6));
+    public App() {
+        parser = new FontParser("JetBrainsMonoNL-Regular"); // Example font
+
+        glyph = new Glyph(parser.ReadGlyph(count));
     }
 
     public void Update() {
-
+        if (Raylib.IsKeyPressed(KeyboardKey.Space)) {
+           glyph = new Glyph(parser.ReadGlyph(++count));
+        }
     }
 
     public void Render() {
