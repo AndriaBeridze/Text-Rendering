@@ -26,6 +26,8 @@ class FontReader {
 
     public int Position => (int) stream.Position;
 
+    // Values in trueType are stored in big endian
+    // Big endian 0x1234 -> Little endian 0x3412
     public UInt16 ReadUInt16() {
         UInt16 value = reader.ReadUInt16();
 
@@ -36,6 +38,7 @@ class FontReader {
         return value;
     }
 
+    // Big endian 0x12345678 -> Little endian 0x78563412
     public UInt32 ReadUInt32() {
         UInt32 value = reader.ReadUInt32();
 

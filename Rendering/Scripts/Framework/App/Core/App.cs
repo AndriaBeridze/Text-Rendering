@@ -1,24 +1,20 @@
 namespace Rendering.App;
 
-using Rendering.API;
 using Rendering.Reading;
-using Raylib_cs;
 
 class App {
     private FontParser parser;
     private Glyph glyph;
 
-    uint count = 0;
+    uint unicode = 'i';
 
     public App() {
-        parser = new FontParser("Poppins-Regular"); // Example font
-
-        glyph = new Glyph(parser.ReadGlyph(count));
+        parser = new FontParser("JetBrainsMonoNL-Regular"); // Example font
+        glyph = new Glyph(parser.ReadGlyphByUnicode(unicode));
     }
 
     public void Update() {
-        Thread.Sleep(100);
-        glyph = new Glyph(parser.ReadGlyph(++count));
+        
     }
 
     public void Render() {

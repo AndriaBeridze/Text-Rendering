@@ -11,6 +11,9 @@ class Glyph {
     }
 
     public void Render() {
+        // Every adjacent pair of points are different types (onCurve, offCurve)
+        // First point is always onCurve
+        // We can get three adjacent points and create a bezier curve from them (two endpoints and one control point)
         foreach (var contour in data.Contours) {
             for (int i = 0; i < contour.Count; i += 2) {
                 Vector2 v1 = contour[i];

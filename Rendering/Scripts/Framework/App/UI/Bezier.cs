@@ -12,8 +12,12 @@ class Bezier {
         this.data = data;
     }
     
-    private Vector2 Lerp(Vector2 s, Vector2 e, float t) {
-        return s + (e - s) * t;
+    // Point travels from start to end with the constant speed
+    // This function tells where the point is at time t
+    // t = 0 -> start
+    // t = 1 -> end
+    private Vector2 Lerp(Vector2 start, Vector2 end, float t) {
+        return start + (end - start) * t;
     }
 
     public void Render() {
