@@ -3,25 +3,23 @@ namespace Rendering.App;
 using Rendering.Loader;
 
 class App {
-    private FontData font;
-    private Glyph glyph;
-
-    uint unicode = 'i';
+    private Text textRender;   
 
     public App() {
-        font = new FontParser("Poppins-Regular").GetFontData();
-        glyph = font.GetGlyph(unicode);
+        FontData font = new FontParser("JetBrainsMonoNL-Regular").GetFontData();
+        textRender = new Text("Hello, World!", font);
     }
 
     public void Update() {
         int? key = Keyboard.RegisterKey();
-        if (key != null) {
-            unicode = (uint) key;
-            glyph = font.GetGlyph(unicode);
+        if (key == -1) {
+            textRender.RemoveChar();
+        } else if (key != null) {
+            textRender.AddChar((uint) key);
         }
     }
 
     public void Render() {
-        glyph.Render();
+        textRender.Render();
     }
 }

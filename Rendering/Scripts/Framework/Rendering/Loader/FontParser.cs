@@ -5,7 +5,7 @@ using Rendering.API;
 using Rendering.Helper;
 
 class FontParser {
-    private char[] supportedCharacters = Theme.SupportedCharacters;
+    private char[] chars = Theme.Chars;
 
     private FontReader reader;
 
@@ -15,6 +15,7 @@ class FontParser {
     private uint[] glyphOffsets;
 
     private (uint, int)[] mapping;
+    private int[] spacing;
 
     private int unitsPerEm;
 
@@ -57,6 +58,7 @@ class FontParser {
         }
 
         mapping = GetUnicodeMapping();
+        spacing = GetCharacterSpacing();
     }
 
     public GlyphData ReadGlyph(uint index) {
@@ -305,20 +307,54 @@ class FontParser {
         return mapping.ToArray();
     }
 
+    public int[] GetCharacterSpacing() {
+        reader.GoTo(tableLocation["hhea"]);
+        reader.SkipBytes(34); // Skip to numAdvanceWidths
+        int numAdvanceWidths = reader.ReadUInt16();
+
+        // Get the advance widths
+        reader.GoTo(tableLocation["hmtx"]);
+        int[] advanceWidths = new int[numGlyphs];
+
+        for (int i = 0; i < numAdvanceWidths; i++) {
+            advanceWidths[i] = reader.ReadUInt16();
+            reader.SkipBytes(2); // Skip left side bearing
+        }
+
+        int monoSpacedWidth = advanceWidths[numAdvanceWidths - 1];
+
+        for (int i = numAdvanceWidths; i < numGlyphs; i++) {
+            advanceWidths[i] = monoSpacedWidth;
+        }
+
+        return advanceWidths;
+    }
+
     public GlyphData ReadGlyphByUnicode(uint unicode) {
         if  (unicode == 32) return new GlyphData([], [], [], []); // Space character
 
         uint glyphIndex = mapping.FirstOrDefault(x => x.Item2 == unicode).Item1;
-
         return ReadGlyph(glyphIndex);
     }
 
+    public int GetSpacingByUnicode(uint unicode) {
+        if  (unicode == 32) return spacing[0]; // Space character
+
+        uint glyphIndex = mapping.FirstOrDefault(x => x.Item2 == unicode).Item1;
+        return spacing[glyphIndex];
+    }
+
     public FontData GetFontData() {
-        GlyphData[] glyphData = new GlyphData[supportedCharacters.Length];
-        for (int i = 0; i < supportedCharacters.Length; i++) {
-            glyphData[i] = ReadGlyphByUnicode(supportedCharacters[i]);
+        GlyphData[] glyphData = new GlyphData[chars.Length + 1];
+        int[] glyphSpacing = new int[chars.Length + 1];
+        for (int i = 0; i < chars.Length; i++) {
+            glyphData[i] = ReadGlyphByUnicode(chars[i]);
+            glyphSpacing[i] = GetSpacingByUnicode(chars[i]);
         }
 
-        return new FontData(glyphData, unitsPerEm);
+        glyphData[chars.Length] = ReadGlyph(0);
+        glyphSpacing[chars.Length] = spacing[0];
+
+        return new FontData(glyphData, glyphSpacing, unitsPerEm);
     }
 }

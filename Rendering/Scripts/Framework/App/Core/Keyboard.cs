@@ -22,6 +22,8 @@ class Keyboard {
     };
 
     public static int? RegisterKey() {
+        if (Raylib.IsKeyPressed(KeyboardKey.Backspace)) return -1;
+
         char? key = null;
         bool isShiftPressed = Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift);
         bool isCapsLockPressed = Raylib.IsKeyDown(KeyboardKey.CapsLock);
