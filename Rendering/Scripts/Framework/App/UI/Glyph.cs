@@ -1,6 +1,7 @@
 namespace Rendering.App;
 
 using Rendering.API;
+using Raylib_cs;
 using System.Numerics;
 
 class Glyph {
@@ -27,6 +28,25 @@ class Glyph {
         return spacing * fontSize;
     }
 
+    public Rectangle GetBoundingBox(int fontSize) {
+        int xMin = int.MaxValue;
+        int xMax = int.MinValue;
+        int yMin = int.MaxValue;
+        int yMax = int.MinValue;
+
+        foreach (var contour in data.Contours) {
+            foreach (var point in contour) {
+                xMin = Math.Min(xMin, (int) (point.X * fontSize));
+                xMax = Math.Max(xMax, (int) (point.X * fontSize));
+                yMin = Math.Min(yMin, (int) (-point.Y * fontSize));
+                yMax = Math.Max(yMax, (int) (-point.Y * fontSize));
+            }
+        }
+
+        return new Rectangle(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+
     public float Render(int fontSize, int offsetX, int offsetY) {
         // Every adjacent pair of points are different types (onCurve, offCurve)
         // First point is always onCurve
@@ -45,6 +65,6 @@ class Glyph {
             }
         }
 
-        return (spacing + 0) * fontSize;
+        return spacing * fontSize;
     }
 }

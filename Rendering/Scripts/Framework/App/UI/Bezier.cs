@@ -30,7 +30,7 @@ class Bezier {
             Vector2 IntermediateB = Lerp(data.Control, data.End, t);
             Vector2 Point = Lerp(IntermediateA, IntermediateB, t);
 
-            Raylib.DrawLineEx(last, Point, 1, Color.White);
+            Raylib.DrawLineEx(last, Point, 1, Color.Red);
 
             last = Point;
         }
