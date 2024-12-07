@@ -1,23 +1,23 @@
 namespace Rendering.App;
 
-using Rendering.Reading;
+using Rendering.Loader;
 
 class App {
-    private FontParser parser;
+    private FontData font;
     private Glyph glyph;
 
     uint unicode = 'i';
 
     public App() {
-        parser = new FontParser("MapleMono-Bold"); // Example font
-        glyph = new Glyph(parser.ReadGlyphByUnicode(unicode));
+        font = new FontParser("Poppins-Regular").GetFontData();
+        glyph = font.GetGlyph(unicode);
     }
 
     public void Update() {
         int? key = Keyboard.RegisterKey();
         if (key != null) {
             unicode = (uint) key;
-            glyph = new Glyph(parser.ReadGlyphByUnicode(unicode));
+            glyph = font.GetGlyph(unicode);
         }
     }
 

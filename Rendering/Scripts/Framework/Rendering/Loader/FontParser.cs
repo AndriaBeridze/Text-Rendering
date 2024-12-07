@@ -1,17 +1,22 @@
-namespace Rendering.Reading;
+namespace Rendering.Loader;
 
 using System.Numerics;
 using Rendering.API;
-using Rendering.App;
 using Rendering.Helper;
 
 class FontParser {
+    private char[] supportedCharacters = Theme.SupportedCharacters;
+
     private FontReader reader;
 
     private Dictionary<string, UInt32> tableLocation = new Dictionary<string, UInt32>();
 
     private int numGlyphs;
     private uint[] glyphOffsets;
+
+    private (uint, int)[] mapping;
+
+    private int unitsPerEm;
 
     public FontParser(string path) {
         reader = new FontReader(path);
@@ -40,7 +45,9 @@ class FontParser {
         // Short version: data -> actual offset / 2
         // Long version:  data -> actual offset
         reader.GoTo(tableLocation["head"]);
-        reader.SkipBytes(50); // Skip to indexToLocFormat
+        reader.SkipBytes(18); // Skip to unitsPerEm
+        unitsPerEm = reader.ReadUInt16();
+        reader.SkipBytes(30); // Skip to indexToLocFormat
         bool isShort = reader.ReadUInt16() == 0;
 
         // Get the glyph offsets by reading numGlyphs values from the loca table
@@ -48,6 +55,8 @@ class FontParser {
         for (int i = 0; i < numGlyphs; i++) {
             glyphOffsets[i] = isShort ? reader.ReadUInt16() * 2u : reader.ReadUInt32();
         }
+
+        mapping = GetUnicodeMapping();
     }
 
     public GlyphData ReadGlyph(uint index) {
@@ -299,16 +308,17 @@ class FontParser {
     public GlyphData ReadGlyphByUnicode(uint unicode) {
         if  (unicode == 32) return new GlyphData([], [], [], []); // Space character
 
-        (uint, int)[] mappings = GetUnicodeMapping();
-        uint glyphIndex = 0;
-
-        for (int i = 0; i < mappings.Length; i++) {
-            if (mappings[i].Item2 == unicode) {
-                glyphIndex = mappings[i].Item1;
-                break;
-            }
-        }
+        uint glyphIndex = mapping.FirstOrDefault(x => x.Item2 == unicode).Item1;
 
         return ReadGlyph(glyphIndex);
+    }
+
+    public FontData GetFontData() {
+        GlyphData[] glyphData = new GlyphData[supportedCharacters.Length];
+        for (int i = 0; i < supportedCharacters.Length; i++) {
+            glyphData[i] = ReadGlyphByUnicode(supportedCharacters[i]);
+        }
+
+        return new FontData(glyphData, unitsPerEm);
     }
 }

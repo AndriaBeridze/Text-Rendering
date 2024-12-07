@@ -1,4 +1,4 @@
-namespace Rendering.Reading;
+namespace Rendering.Loader;
 
 class FontReader {
     private Stream stream;
